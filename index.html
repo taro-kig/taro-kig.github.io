@@ -1,0 +1,182 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@TARO_KIG</title>
+  <meta name="description" content="Shape Grammer" />
+  <meta name="theme-color" content="#000" />
+  <style>
+    :root { --bg:#000; --fg:#fff; --red:#E50914; --muted:#8a8a8a; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial; }
+
+    header { position: sticky; top: 0; z-index: 40; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #000; border-bottom: 1px solid #111; }
+    .brand { font-weight: 800; letter-spacing: .6px; }
+
+    .hero { position: relative; min-height: min(92vh, 980px); border-bottom: 1px solid #111; }
+    canvas#heroCanvas { display:block; width:100%; height:auto; aspect-ratio: 4 / 5; background:#000; }
+
+    .flyer-strip { position:absolute; left:0; right:0; bottom:0; background:#000; border-top:1px solid #111; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .mini-wrap { display:flex; align-items:center; gap:8px; overflow:auto; scrollbar-width:none; }
+    .mini-wrap::-webkit-scrollbar{ display:none; }
+    canvas.mini { width:56px; height:auto; aspect-ratio:3/5; display:block; background:#000; flex:0 0 auto; }
+    .strap { font-size:12px; color:#fff; letter-spacing: .25em; font-weight:700; white-space:nowrap; }
+
+    main { max-width: 1100px; margin: 24px auto 80px; padding: 0 16px; }
+    .links, .posts { margin-top: 32px; }
+    .links a, .post { display:inline-block; border:1px solid #151515; padding:10px 12px; color:#fff; text-decoration:none; margin-right:8px; margin-bottom:8px; }
+    .links a:hover, .post:hover { background:#050505; }
+
+    footer { color:#888; text-align:center; padding:40px 0 60px; border-top:1px solid #111; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">@TARO_KIG</div>
+    <div style="font-size:12px;color:#888;">Shape Grammer</div>
+  </header>
+
+  <section class="hero" aria-label="Big K with rule grid">
+    <canvas id="heroCanvas" aria-label="K"></canvas>
+    <div class="flyer-strip" role="region" aria-label="Flyer bottom strip">
+      <div class="mini-wrap" id="miniLetters" aria-label="Other letters"></div>
+      <div class="strap" id="strapText">@TARO_KIG</div>
+    </div>
+  </section>
+
+  <main>
+    <section class="links" aria-label="Links">
+      <a href="https://x.com/taro_kig" target="_blank" rel="noopener noreferrer">X (Twitter)</a>
+      <a href="https://github.com/taro-kig" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </section>
+
+  </main>
+
+  <footer>© <span id="year"></span> KIGURUMI — Visible rules for letters.</footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const WORD = 'KIGURUMI';
+
+    // === Canvas setup ===
+    function setupCanvas(canvas, cssW, cssH){
+      const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return ctx;
+    }
+
+    // === Helpers ===
+    function isRightAngle(p0, p1, p2){
+      const ax = p0.x - p1.x, ay = p0.y - p1.y;
+      const bx = p2.x - p1.x, by = p2.y - p1.y;
+      const al = Math.hypot(ax,ay)||1, bl = Math.hypot(bx,by)||1;
+      const cos = (ax/al)*(bx/bl) + (ay/al)*(by/bl);
+      return Math.abs(cos) < 0.12;
+    }
+    function drawRuleGrid(ctx, x,y,w,h, gx,gy){
+      ctx.save(); // orthogonal
+      ctx.strokeStyle = 'rgba(229,9,20,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([]);
+      for(let i=0;i<=gx;i++){ const xx = x + w*i/gx; ctx.beginPath(); ctx.moveTo(xx,y); ctx.lineTo(xx,y+h); ctx.stroke(); }
+      for(let j=0;j<=gy;j++){ const yy = y + h*j/gy; ctx.beginPath(); ctx.moveTo(x,yy); ctx.lineTo(x+w,yy); ctx.stroke(); }
+      // 45° families
+      ctx.strokeStyle = 'rgba(229,9,20,0.32)'; ctx.setLineDash([8,10]);
+      for(let k=-(gx); k<=gy; k++){
+        let first=true; ctx.beginPath();
+        for(let c=0;c<=gx;c++){ const r=c+k; if(r<0||r>gy) continue; const xx=x+(c/gx)*w, yy=y+(r/gy)*h; if(first){ctx.moveTo(xx,yy); first=false;} else ctx.lineTo(xx,yy);} if(!first) ctx.stroke();
+      }
+      for(let k=0; k<=gx+gy; k++){
+        let first=true; ctx.beginPath();
+        for(let c=0;c<=gx;c++){ const r=k-c; if(r<0||r>gy) continue; const xx=x+(c/gx)*w, yy=y+(r/gy)*h; if(first){ctx.moveTo(xx,yy); first=false;} else ctx.lineTo(xx,yy);} if(!first) ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // === Grid coordinate labels (A.. columns, 0..rows) ===
+    function drawGridLabels(ctx, x,y,w,h,gx,gy){
+      ctx.save();
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.font='10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+      // columns A.. inside top edge
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      for(let i=0;i<=gx;i++){ const xx=x+(i/gx)*w; const label=String.fromCharCode(65+i); ctx.fillText(label, xx, y+2); }
+      // rows 0..gy inside left edge
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      for(let j=0;j<=gy;j++){ const yy=y+(j/gy)*h; ctx.fillText(String(j), x+2, yy); }
+      ctx.restore();
+    }
+
+    // === Blueprints (grid index) ===
+    function letterBlueprint(ch, gx, gy){
+      const gp = (c,r)=>({c,r});
+      switch(ch){
+        case 'I':
+          return [ [gp(1,1), gp(gx-1,1)], [gp(Math.floor(gx/2),1), gp(Math.floor(gx/2),gy-1)], [gp(1,gy-1), gp(gx-1,gy-1)] ];
+        case 'K': { const midR=Math.floor(gy/2); const dUp=Math.min(gx-2, midR-1); const dDn=Math.min(gx-2,(gy-1)-midR);
+          return [ [gp(1,1), gp(1,gy-1)], [gp(1,midR), gp(1+dUp, midR-dUp)], [gp(1,midR), gp(1+dDn, midR+dDn)] ]; }
+        case 'G':
+          return [ [gp(gx-1,1), gp(1,1), gp(1,gy-1), gp(gx-1,gy-1)], [gp(Math.floor(gx*0.55), Math.floor(gy*0.5)), gp(gx-1, Math.floor(gy*0.5)), gp(gx-1, Math.floor(gy*0.65))] ];
+        case 'U':
+          return [ [gp(1,1), gp(1,gy-1), gp(gx-1,gy-1), gp(gx-1,1)] ];
+        case 'R': { const midR=Math.floor(gy/2); const dLeg=Math.min(gx-2,(gy-1)-midR);
+          return [ [gp(1,1), gp(1,midR), gp(gx-2,midR), gp(gx-2,1), gp(1,1)], [gp(1,midR), gp(1+dLeg, midR+dLeg)] ]; }
+        case 'M': { const d=Math.min(Math.floor(gx/2)-1, Math.floor(gy/2)-1);
+          return [ [gp(1,gy-1), gp(1,1), gp(1+d, 1+d), gp(gx-1-d,1+d), gp(gx-1,1), gp(gx-1,gy-1)] ]; }
+        default:
+          return [ [gp(1,1), gp(1,gy-1), gp(gx-1,gy-1), gp(gx-1,1), gp(1,1)] ];
+      }
+    }
+
+    // === Mono stroke width ===
+    function monoWidth(s){ return s*0.12; }
+
+    // === Render letter as pure white, no animation ===
+    function drawLetter(canvas, ch, opts){
+      const {gridX=6, gridY=8, showGrid=true, weightMul=1, inset: insetOpt=24} = opts||{};
+      const cssW = canvas.getBoundingClientRect().width || canvas.offsetWidth || 400;
+      const cssH = cssW * 5/3;
+      const ctx = setupCanvas(canvas, cssW, cssH);
+      const W = cssW, H = cssH; ctx.clearRect(0,0,W,H);
+
+      const inset = insetOpt; const x = inset, y = inset; const w = W-2*inset, h = H-2*inset;
+      const rCorner = Math.min(w/gridX, h/gridY);
+
+      if(showGrid){ drawRuleGrid(ctx, x,y,w,h, gridX, gridY); drawGridLabels(ctx, x,y,w,h, gridX, gridY); }
+
+      const toXY = (c,r)=>({ x: x + (c/gridX)*w, y: y + (r/gridY)*h });
+      const s = Math.min(w,h);
+      const width = monoWidth(s) * weightMul;
+
+      const paths = letterBlueprint(ch, gridX, gridY);
+      paths.forEach(path=>{
+        const pts = path.map(p=>({x:x+(p.c/gridX)*w, y:y+(p.r/gridY)*h}));
+        // solid white stroke
+        ctx.save(); ctx.strokeStyle='#fff'; ctx.lineWidth=width; ctx.lineCap='round'; ctx.lineJoin='round';
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+        for(let i=1;i<pts.length;i++){ const p0=pts[i-1], p1=pts[i], p2=(i<pts.length-1)? pts[i+1]: null; if(p2 && isRightAngle(p0,p1,p2)) ctx.arcTo(p1.x,p1.y,p2.x,p2.y, rCorner); else ctx.lineTo(p1.x,p1.y);} ctx.stroke(); ctx.restore();
+      });
+    }
+
+    // === Mount hero K (static) ===
+    const hero = document.getElementById('heroCanvas');
+    function renderHero(){ drawLetter(hero, 'K', {gridX:6, gridY:8, showGrid:true}); }
+    window.addEventListener('resize', renderHero); renderHero();
+
+    // === Build flyer strip (IGURUMI white) ===
+    const miniWrap = document.getElementById('miniLetters');
+    function mountStrip(){ miniWrap.innerHTML=''; const letters = WORD.slice(1).split(''); letters.forEach(ch=>{ const c=document.createElement('canvas'); c.className='mini'; miniWrap.appendChild(c); requestAnimationFrame(()=> drawLetter(c, ch, { gridX:6, gridY:8, showGrid:false, weightMul:1.35, inset:10})); }); }
+    window.addEventListener('resize', mountStrip); mountStrip();
+
+    // === Self-test ===
+    (function(){ const w = monoWidth(300); if(!(w>0)) console.error('[SELFTEST] width calc failed'); })();
+  </script>
+</body>
+</html>
