@@ -16,7 +16,7 @@ window.CHARACTERS = [
     id: 'yuuka',
     name: '早瀬ユウカ',
     from: 'ブルーアーカイブ',
-    maker: '要確認',
+    maker: '@heyaoheyao',
     accent: '#4aa3ff',
     bg: '#071a33',
     theme: 'plot',
