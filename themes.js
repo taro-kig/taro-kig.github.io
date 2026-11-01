@@ -33,7 +33,7 @@
   const plot = {
     cmd: 'calc',
     help: 'calc 式    計算する（例: calc 12*34）',
-    tip: 'クリックで波紋',
+    tip: 'click to make a ripple',
     ripples: [],
     draw(g, W, H, T, { accent, bg, mouse }){
       const { cols, rows, put, stamp, small, cw, ch } = grid(g, W, H, bg);
@@ -108,7 +108,7 @@
   const book = {
     cmd: 'find',
     help: 'find 言葉  本の中を検索する',
-    tip: 'クリックで本を読む',
+    tip: 'click to read a book',
     draw(g, W, H, T, { accent, bg, mouse }){
       const { cols, rows, put, stamp, cw, ch } = grid(g, W, H, bg);
       const mx = mouse.x / cw, my = mouse.y / ch;
@@ -158,7 +158,7 @@
   const meadow = {
     cmd: 'plant',
     help: 'plant     草原に花を植える',
-    tip: 'クリックで花を植える',
+    tip: 'click to plant a flower',
     draw(g, W, H, T, { accent, bg, mouse }){
       const { cols, rows, put, stamp, small, cw, ch } = grid(g, W, H, bg);
       const mx = mouse.x / cw, my = mouse.y / ch;

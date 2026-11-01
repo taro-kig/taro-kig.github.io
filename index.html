@@ -269,7 +269,7 @@
       photo.setAttribute('aria-label', `${c.name} の着ぐるみ写真`);
       const next = THEMES[c.theme];
       if (next !== theme) setTheme(next, c.accent, c.bg);
-      $('hint').textContent = `${touch ? '↕ スワイプでキャラ変更 / ↔ 写真切替' : 'scroll / ↑↓ でキャラ変更 — ←→ 写真切替'} — ${next.tip}`;
+      $('hint').textContent = `${touch ? '↕ swipe to change character — ↔ switch photo' : 'scroll / ↑↓ to change character — ←→ switch photo'} — ${touch ? next.tip.replace('click', 'tap') : next.tip}`;
       if (calm) requestAnimationFrame(draw);
       const view = await viewOf(src);
       if (token !== show.token) return;
