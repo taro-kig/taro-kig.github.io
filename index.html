@@ -1,184 +1,338 @@
-
 <!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>@TARO_KIG</title>
-  <meta name="description" content="Shape Grammer" />
-  <meta name="theme-color" content="#000" />
+  <meta name="description" content="TARO_KIG の着ぐるみキャラクター一覧" />
+  <meta name="theme-color" content="#141414" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style>
-    :root { --bg:#000; --fg:#fff; --red:#E50914; --muted:#8a8a8a; }
+    :root { --bg:#141414; --fg:#e8e6e1; --muted:#85827b; --line:#2c2b29; --accent:#6d5dfc; }
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body { margin: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial; }
+    html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+    body { background: var(--bg); color: var(--fg); font: clamp(14px, 1.15vw, 18px)/1.7 "JetBrains Mono", "BIZ UDGothic", ui-monospace, Consolas, monospace; }
+    a { color: inherit; text-underline-offset: 3px; }
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+    :focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
-    header { position: sticky; top: 0; z-index: 40; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #000; border-bottom: 1px solid #111; }
-    .brand { font-weight: 800; letter-spacing: .6px; }
+    #stage { position: fixed; inset: 0; touch-action: none; }
+    #bg { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
 
-    .hero { position: relative; min-height: min(92vh, 980px); border-bottom: 1px solid #111; }
-    canvas#heroCanvas { display:block; width:100%; height:auto; aspect-ratio: 4 / 5; background:#000; }
+    nav { position: absolute; z-index: 3; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 20px clamp(16px, 4vw, 48px); color: var(--muted); font-size: 12px; }
+    nav > * { padding: 0 6px; background: color-mix(in srgb, var(--bg) 90%, transparent); }
+    nav b { color: var(--fg); }
+    nav .links { display: flex; gap: 18px; }
 
-    .flyer-strip { position:absolute; left:0; right:0; bottom:0; background:#000; border-top:1px solid #111; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .mini-wrap { display:flex; align-items:center; gap:8px; overflow:auto; scrollbar-width:none; }
-    .mini-wrap::-webkit-scrollbar{ display:none; }
-    canvas.mini { width:56px; height:auto; aspect-ratio:3/5; display:block; background:#000; flex:0 0 auto; }
-    .strap { font-size:12px; color:#fff; letter-spacing: .25em; font-weight:700; white-space:nowrap; }
+    #frame { position: absolute; z-index: 1; margin: 0; right: clamp(0px, 7vw, 150px); top: 50%; width: min(66vh, 54vw); aspect-ratio: 2 / 3; transform: translateY(-50%); pointer-events: none;  }
+    #photo { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+    #frame figcaption { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; gap: 1ch; color: var(--muted); font-size: 11px; line-height: 20px; }
 
-    main { max-width: 1100px; margin: 24px auto 80px; padding: 0 16px; }
-    .links, .posts { margin-top: 32px; }
-    .links a, .post { display:inline-block; border:1px solid #151515; padding:10px 12px; color:#fff; text-decoration:none; margin-right:8px; margin-bottom:8px; }
-    .links a:hover, .post:hover { background:#050505; }
+    #term { position: absolute; z-index: 2; left: clamp(16px, 7vw, 130px); top: 50%; transform: translateY(-50%); width: min(46ch, 40vw); padding: 18px 20px; margin-left: -20px; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+    #log { margin: 0; min-height: 15em; white-space: pre-wrap; word-break: break-word; font: inherit; }
+    #log .dim { color: var(--muted); }
+    #log .key { color: var(--accent); }
+    #log h1 { display: inline; margin: 0; font-size: 1.6em; font-weight: 700; }
+    #prompt { display: flex; align-items: baseline; gap: 1ch; margin-top: 1em; border-top: 1px solid var(--line); padding-top: .8em; }
+    #prompt label { color: var(--accent); white-space: nowrap; }
+    #cmd { flex: 1; min-width: 0; font: inherit; color: var(--fg); background: none; border: 0; outline: 0; caret-color: var(--accent); caret-shape: block; }
+    #cmd::placeholder { color: #55534e; }
 
-    footer { color:#888; text-align:center; padding:40px 0 60px; border-top:1px solid #111; }
+    #rail { position: absolute; z-index: 3; right: clamp(16px, 3vw, 44px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 12px; text-align: right; }
+    #rail button[aria-current="true"] { color: var(--accent); font-weight: 700; }
+
+    #hint { position: absolute; z-index: 2; left: clamp(16px, 7vw, 110px); bottom: 22px; padding: 0 6px; color: var(--muted); font-size: 12px; background: color-mix(in srgb, var(--bg) 90%, transparent); }
+
+    @media (max-width: 760px) {
+      nav { padding: 14px 16px; }
+      #frame { top: 58px; right: auto; left: 50%; width: auto; height: 50dvh; transform: translateX(-50%); }
+      #frame figcaption { display: none; }
+      #term { left: 8px; right: 8px; top: auto; bottom: calc(40px + env(safe-area-inset-bottom)); width: auto; margin: 0; padding: 10px 8px; transform: none; font-size: 13px; line-height: 1.55; }
+      #log { min-height: 10.5em; max-height: 30dvh; overflow: hidden; }
+      #rail { right: 10px; top: 78px; transform: none; }
+      #hint { left: 16px; bottom: calc(14px + env(safe-area-inset-bottom)); font-size: 11px; }
+    }
   </style>
 </head>
 <body>
-  <!--
-    <header>
-      <div class="brand">@TARO_KIG</div>
-      <div style="font-size:12px;color:#888;">Shape Grammer</div>
-    </header>
-  -->
-
-  <section class="hero" aria-label="Big K with rule grid">
-    <canvas id="heroCanvas" aria-label="K"></canvas>
-    <div class="flyer-strip" role="region" aria-label="Flyer bottom strip">
-      <div class="mini-wrap" id="miniLetters" aria-label="Other letters"></div>
-      <!-- <div class="strap" id="strapText">@TARO_KIG</div> -->
-    </div>
-  </section>
-
-  <main>
-    <section class="links" aria-label="Links">
-      <a href="https://x.com/taro_kig" target="_blank" rel="noopener noreferrer">X (Twitter)</a>
-      <a href="https://github.com/taro-kig" target="_blank" rel="noopener noreferrer">GitHub</a>
+  <main id="stage">
+    <canvas id="bg" aria-hidden="true"></canvas>
+    <nav>
+      <b>@TARO_KIG</b>
+      <span class="links">
+        <a href="https://x.com/taro_kig" target="_blank" rel="noopener noreferrer">x</a>
+        <a href="https://github.com/taro-kig" target="_blank" rel="noopener noreferrer">github</a>
+      </span>
+    </nav>
+    <figure id="frame">
+      <canvas id="photo" width="660" height="990" role="img"></canvas>
+      <figcaption><span id="file" hidden></span><span id="look"></span></figcaption>
+    </figure>
+    <section id="term" aria-label="ターミナル">
+      <pre id="log" aria-live="polite"></pre>
+      <form id="prompt" autocomplete="off">
+        <label for="cmd">taro@kig:~$</label>
+        <input id="cmd" enterkeyhint="go" autocapitalize="off" spellcheck="false" placeholder="help" />
+      </form>
     </section>
-
+    <div id="rail" role="navigation" aria-label="キャラクター一覧"></div>
+    <div id="hint"></div>
   </main>
 
-  <footer>© <span id="year"></span> @TARO_KIG — Visible rules for letters.</footer>
-
+  <script src="themes.js"></script>
+  <script src="characters.js"></script>
   <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
+    const LIST = window.CHARACTERS;
+    const $ = id => document.getElementById(id);
+    const canvas = $('bg'), ctx = canvas.getContext('2d');
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const touch = matchMedia('(pointer: coarse)').matches;
 
-    const WORD = 'KIGURUMI';
+    let current = 0, look = 0, W = 0, H = 0, typing = 0, lastTurn = 0;
 
-    // === Canvas setup ===
-    function setupCanvas(canvas, cssW, cssH){
-      const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-      canvas.width = Math.round(cssW * dpr);
-      canvas.height = Math.round(cssH * dpr);
-      canvas.style.width = cssW + 'px';
-      canvas.style.height = cssH + 'px';
-      const ctx = canvas.getContext('2d');
+    // === 背景テーマ（切り替え時は走査線で上から書き換える） ===
+    let theme = null, prevTheme = null, wipeStart = -1e6, prevAccent = '', accent = '', prevBg = '', bg = '', lastT = 0;
+    const mouse = { x: 0, y: 0, tx: 0, ty: 0, on: false, w: 0 };
+    let lastFrame = 0;
+    const GLYPHS = '01#$%&*+=/<>|~';
+    function setTheme(next, color, back){
+      prevTheme = theme; prevAccent = accent; prevBg = bg; theme = next; accent = color; bg = back; wipeStart = performance.now();
+    }
+    function draw(t){
+      if (!calm && t - lastFrame < 40) return requestAnimationFrame(draw);
+      lastFrame = t;
+      ctx.clearRect(0, 0, W, H);
+      mouse.x += (mouse.tx - mouse.x) * .35; mouse.y += (mouse.ty - mouse.y) * .35;
+      mouse.w += ((mouse.on ? 1 : 0) - mouse.w) * .12;
+      const T = lastT = calm ? 40 : t / 1000, p = calm ? 1 : Math.min(1, (performance.now() - wipeStart) / 650);
+      const y = H * p * (2 - p);
+      if (prevTheme && p < 1) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, y, W, H - y); ctx.clip();
+        ctx.fillStyle = prevBg; ctx.fillRect(0, 0, W, H);
+        prevTheme.draw(ctx, W, H, T, { accent: prevAccent, bg: prevBg, mouse }); ctx.restore();
+      }
+      if (theme) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, y); ctx.clip();
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        theme.draw(ctx, W, H, T, { accent, bg, mouse }); ctx.restore();
+      }
+      if (p < 1) {
+        ctx.fillStyle = accent; ctx.fillRect(0, y, W, 1);
+        let noise = '';
+        for (let i = 0; i < W / 8; i++) noise += GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+        ctx.fillText(noise, 0, y + 3);
+      }
+      if (!calm) requestAnimationFrame(draw);
+    }
+    function resize(){
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      W = innerWidth; H = innerHeight;
+      canvas.width = W * dpr; canvas.height = H * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return ctx;
+      if (calm) requestAnimationFrame(draw);
     }
 
-    // === Helpers ===
-    function isRightAngle(p0, p1, p2){
-      const ax = p0.x - p1.x, ay = p0.y - p1.y;
-      const bx = p2.x - p1.x, by = p2.y - p1.y;
-      const al = Math.hypot(ax,ay)||1, bl = Math.hypot(bx,by)||1;
-      const cos = (ax/al)*(bx/bl) + (ay/al)*(by/bl);
-      return Math.abs(cos) < 0.12;
+    // === ターミナル ===
+    const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    function print(html){
+      // タグを壊さないよう、タグは一括・文字は1字ずつ出す
+      const run = ++typing, log = $('log');
+      if (calm) { log.innerHTML = html; return; }
+      const tokens = html.match(/<[^>]+>|&[a-z]+;|[\s\S]/g) || [];
+      let i = 0;
+      (function tick(){
+        if (run !== typing) return;
+        let n = 3;
+        while (n > 0 && i < tokens.length) { if (tokens[i++][0] !== '<') n--; }
+        log.innerHTML = tokens.slice(0, i).join('');
+        if (i < tokens.length) setTimeout(tick, 16);
+      })();
     }
-    function drawRuleGrid(ctx, x,y,w,h, gx,gy){
-      ctx.save(); // orthogonal
-      ctx.strokeStyle = 'rgba(229,9,20,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([]);
-      for(let i=0;i<=gx;i++){ const xx = x + w*i/gx; ctx.beginPath(); ctx.moveTo(xx,y); ctx.lineTo(xx,y+h); ctx.stroke(); }
-      for(let j=0;j<=gy;j++){ const yy = y + h*j/gy; ctx.beginPath(); ctx.moveTo(x,yy); ctx.lineTo(x+w,yy); ctx.stroke(); }
-      // 45° families
-      ctx.strokeStyle = 'rgba(229,9,20,0.32)'; ctx.setLineDash([8,10]);
-      for(let k=-(gx); k<=gy; k++){
-        let first=true; ctx.beginPath();
-        for(let c=0;c<=gx;c++){ const r=c+k; if(r<0||r>gy) continue; const xx=x+(c/gx)*w, yy=y+(r/gy)*h; if(first){ctx.moveTo(xx,yy); first=false;} else ctx.lineTo(xx,yy);} if(!first) ctx.stroke();
+    const pad = n => String(n + 1).padStart(2, '0');
+    function profile(c, i){
+      return `<span class="dim">$ cat characters/${pad(i)}_${esc(c.id)}.yml</span>\n\n<h1>${esc(c.name)}</h1>\n\n` +
+        (c.from ? `<span class="key">from </span> ${esc(c.from)}\n` : '') + `<span class="key">maker</span> ${esc(c.maker)}\n<span class="key">looks</span> ${c.looks.length}` +
+        (c.quote ? `\n\n<span class="dim">“${esc(c.quote)}”</span>` : '');
+    }
+    const HELP = `<span class="dim">$ help</span>\n\n<span class="key">ls</span>        一覧を表示\n<span class="key">open N</span>    N番を開く\n<span class="key">next/prev</span> 前後のキャラ\n<span class="key">look</span>      別の写真に切替\n<span class="key">whoami</span>    このサイトについて\n<span class="key">clear</span>     現在のキャラに戻る`;
+    function listing(){
+      return `<span class="dim">$ ls characters/</span>\n\n` + LIST.map((c, i) => `<span class="key">${pad(i)}</span> ${esc(c.name)}`).join('\n');
+    }
+    function run(line){
+      const [cmd, arg] = line.trim().toLowerCase().split(/\s+/);
+      if (!cmd) return;
+      const special = THEMES[LIST[current].theme];
+      if (cmd === special.cmd) {
+        const rest = line.trim().slice(cmd.length).trim();
+        return print(`<span class="dim">$ ${esc(line.trim())}</span>\n\n${special.run(rest)}`);
       }
-      for(let k=0; k<=gx+gy; k++){
-        let first=true; ctx.beginPath();
-        for(let c=0;c<=gx;c++){ const r=k-c; if(r<0||r>gy) continue; const xx=x+(c/gx)*w, yy=y+(r/gy)*h; if(first){ctx.moveTo(xx,yy); first=false;} else ctx.lineTo(xx,yy);} if(!first) ctx.stroke();
+      if (cmd === 'help') print(HELP + `\n<span class="key">${esc(special.help)}</span>`);
+      else if (cmd === 'ls') print(listing());
+      else if (cmd === 'next') go(current + 1);
+      else if (cmd === 'prev') go(current - 1);
+      else if (cmd === 'look') turnLook(1);
+      else if (cmd === 'clear') print(profile(LIST[current], current));
+      else if (cmd === 'whoami') print(`<span class="dim">$ whoami</span>\n\ntaro_kig — 着ぐるみの記録。`);
+      else if (cmd === 'open') {
+        const i = LIST.findIndex((c, n) => String(n + 1) === String(Number(arg)) || c.id === arg);
+        if (i < 0) print(`<span class="dim">$ open ${esc(arg || '')}</span>\n\nnot found. <span class="key">ls</span> で一覧を確認`);
+        else go(i);
       }
-      ctx.restore();
+      else print(`<span class="dim">$ ${esc(cmd)}</span>\n\ncommand not found. <span class="key">help</span> を試してください`);
     }
 
-    // === Grid coordinate labels (A.. columns, 0..rows) ===
-    function drawGridLabels(ctx, x,y,w,h,gx,gy){
-      ctx.save();
-      ctx.fillStyle='rgba(255,255,255,0.7)';
-      ctx.font='10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-      // columns A.. inside top edge
-      ctx.textAlign='center'; ctx.textBaseline='top';
-      for(let i=0;i<=gx;i++){ const xx=x+(i/gx)*w; const label=String.fromCharCode(65+i); ctx.fillText(label, xx, y+2); }
-      // rows 0..gy inside left edge
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      for(let j=0;j<=gy;j++){ const yy=y+(j/gy)*h; ctx.fillText(String(j), x+2, yy); }
-      ctx.restore();
+    // === 切り替え ===
+    const loadImage = src => new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = src; });
+    // === 写真: 人物を残し、周囲をドットに崩して背景へ溶かす ===
+    const MASK_W = 110, MASK_H = 165;
+    const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    const photo = $('photo'), photoCtx = photo.getContext('2d');
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = MASK_W; maskCanvas.height = MASK_H;
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    const maskData = maskCtx.createImageData(MASK_W, MASK_H);
+    const clamp = v => Math.max(0, Math.min(1, v));
+    function drawCover(g, img, w, h){
+      const s = Math.min(img.width / 2, img.height / 3);
+      g.drawImage(img, (img.width - s * 2) / 2, (img.height - s * 3) / 2, s * 2, s * 3, 0, 0, w, h);
     }
-
-    // === Blueprints (grid index) ===
-    function letterBlueprint(ch, gx, gy){
-      const gp = (c,r)=>({c,r});
-      switch(ch){
-        case 'I':
-          return [ [gp(1,1), gp(gx-1,1)], [gp(Math.floor(gx/2),1), gp(Math.floor(gx/2),gy-1)], [gp(1,gy-1), gp(gx-1,gy-1)] ];
-        case 'K': { const midR=Math.floor(gy/2); const dUp=Math.min(gx-2, midR-1); const dDn=Math.min(gx-2,(gy-1)-midR);
-          return [ [gp(1,1), gp(1,gy-1)], [gp(1,midR), gp(1+dUp, midR-dUp)], [gp(1,midR), gp(1+dDn, midR+dDn)] ]; }
-        case 'G':
-          return [ [gp(gx-1,1), gp(1,1), gp(1,gy-1), gp(gx-1,gy-1)], [gp(Math.floor(gx*0.55), Math.floor(gy*0.5)), gp(gx-1, Math.floor(gy*0.5)), gp(gx-1, Math.floor(gy*0.65))] ];
-        case 'U':
-          return [ [gp(1,1), gp(1,gy-1), gp(gx-1,gy-1), gp(gx-1,1)] ];
-        case 'R': { const midR=Math.floor(gy/2); const dLeg=Math.min(gx-2,(gy-1)-midR);
-          return [ [gp(1,1), gp(1,midR), gp(gx-2,midR), gp(gx-2,1), gp(1,1)], [gp(1,midR), gp(1+dLeg, midR+dLeg)] ]; }
-        case 'M': { const d=Math.min(Math.floor(gx/2)-1, Math.floor(gy/2)-1);
-          return [ [gp(1,gy-1), gp(1,1), gp(1+d, 1+d), gp(gx-1-d,1+d), gp(gx-1,1), gp(gx-1,gy-1)] ]; }
-        default:
-          return [ [gp(1,1), gp(1,gy-1), gp(gx-1,gy-1), gp(gx-1,1), gp(1,1)] ];
+    function scoreOf(img){
+      drawCover(maskCtx, img, MASK_W, MASK_H);
+      const d = maskCtx.getImageData(0, 0, MASK_W, MASK_H).data;
+      const at = (x, y, c) => d[(y * MASK_W + x) * 4 + c];
+      const raw = new Float32Array(MASK_W * MASK_H);
+      for (let y = 0; y < MASK_H; y++) for (let x = 0; x < MASK_W; x++) {
+        // 左右の端の色を背景とみなし、そこから離れた色を人物として扱う
+        const t = x / (MASK_W - 1);
+        let sum = 0;
+        for (let c = 0; c < 3; c++) sum += (at(x, y, c) - (at(2, y, c) * (1 - t) + at(MASK_W - 3, y, c) * t)) ** 2;
+        raw[y * MASK_W + x] = clamp((Math.sqrt(sum) - 22) / 60);
       }
+      const score = new Float32Array(raw.length);
+      for (let y = 0; y < MASK_H; y++) for (let x = 0; x < MASK_W; x++) {
+        let sum = 0, n = 0;
+        for (let oy = -3; oy <= 3; oy++) for (let ox = -3; ox <= 3; ox++) {
+          const v = raw[(y + oy) * MASK_W + x + ox];
+          if (x + ox >= 0 && x + ox < MASK_W && v !== undefined) { sum += v; n++; }
+        }
+        const nx = (x / MASK_W - .5) / .5, ny = (y / MASK_H - .46) / .54, r = Math.hypot(nx, ny);
+        const vignette = clamp((1 - r) / .34), core = clamp((.62 - r) / .2);
+        score[y * MASK_W + x] = vignette * clamp(.12 + sum / n * 1.5 + core * .75);
+      }
+      return score;
+    }
+    function renderPhoto(view, reveal){
+      photoCtx.globalCompositeOperation = 'source-over';
+      photoCtx.clearRect(0, 0, photo.width, photo.height);
+      if (!view) return;
+      drawCover(photoCtx, view.img, photo.width, photo.height);
+      for (let y = 0; y < MASK_H; y++) for (let x = 0; x < MASK_W; x++) {
+        const i = y * MASK_W + x, on = view.score[i] * reveal * 1.25 > (BAYER[(y & 3) * 4 + (x & 3)] + .5) / 16;
+        maskData.data[i * 4 + 3] = on ? 255 : 0;
+      }
+      maskCtx.putImageData(maskData, 0, 0);
+      photoCtx.globalCompositeOperation = 'destination-in';
+      photoCtx.imageSmoothingEnabled = false;
+      photoCtx.drawImage(maskCanvas, 0, 0, photo.width, photo.height);
+      photoCtx.imageSmoothingEnabled = true;
+      // 明るい壁が白い縁に残らないよう、外周だけ背景色へ沈める
+      photoCtx.globalCompositeOperation = 'source-atop';
+      const w = photo.width, h = photo.height, shade = photoCtx.createRadialGradient(w / 2, h * .46, h * .22, w / 2, h * .46, h * .56);
+      shade.addColorStop(0, bg + '00'); shade.addColorStop(1, bg + 'e6');
+      photoCtx.fillStyle = shade; photoCtx.fillRect(0, 0, w, h);
+    }
+    const pause = ms => new Promise(ok => setTimeout(ok, ms));
+    async function animatePhoto(view, from, to, steps, token){
+      for (let i = 1; i <= steps; i++) {
+        if (token !== show.token) return false;
+        renderPhoto(view, from + (to - from) * i / steps);
+        await pause(36);
+      }
+      return true;
+    }
+    const views = new Map();
+    function viewOf(src){
+      if (!views.has(src)) views.set(src, loadImage(src).then(img => ({ img, score: scoreOf(img) })));
+      return views.get(src);
+    }
+    let shown = null;
+    async function show(){
+      const c = LIST[current], src = c.looks[look], token = ++show.token;
+      document.documentElement.style.setProperty('--accent', c.accent);
+      document.documentElement.style.setProperty('--bg', c.bg);
+      document.querySelector('meta[name=theme-color]').content = c.bg;
+      [...$('rail').children].forEach((b, i) => b.setAttribute('aria-current', i === current));
+      $('file').textContent = src.split('/').pop();
+      $('look').textContent = `${look + 1}/${c.looks.length}`;
+      photo.setAttribute('aria-label', `${c.name} の着ぐるみ写真`);
+      const next = THEMES[c.theme];
+      if (next !== theme) setTheme(next, c.accent, c.bg);
+      $('hint').textContent = `${touch ? '↕ スワイプでキャラ変更 / ↔ 写真切替' : 'scroll / ↑↓ でキャラ変更 — ←→ 写真切替'} — ${next.tip}`;
+      if (calm) requestAnimationFrame(draw);
+      const view = await viewOf(src);
+      if (token !== show.token) return;
+      if (calm) { shown = view; return renderPhoto(view, 1); }
+      if (shown && !await animatePhoto(shown, 1, 0, 6, token)) return;
+      shown = view;
+      await animatePhoto(view, 0, 1, 14, token);
+    }
+    show.token = 0;
+    function go(i){
+      current = (i + LIST.length) % LIST.length; look = 0;
+      history.replaceState(null, '', '#' + LIST[current].id);
+      print(profile(LIST[current], current));
+      show();
+    }
+    function turnLook(d){
+      const n = LIST[current].looks.length;
+      if (n < 2) return print(`<span class="dim">$ look</span>\n\n写真は1枚だけです`);
+      look = (look + d + n) % n; show();
+    }
+    function step(d){
+      const now = performance.now();
+      if (now - lastTurn < 750) return;
+      lastTurn = now; go(current + d);
     }
 
-    // === Mono stroke width ===
-    function monoWidth(s){ return s*0.12; }
+    // === 入力 ===
+    $('prompt').addEventListener('submit', e => { e.preventDefault(); run($('cmd').value); $('cmd').value = ''; });
+    addEventListener('wheel', e => { if (Math.abs(e.deltaY) > 8) step(Math.sign(e.deltaY)); }, { passive: true });
+    addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); step(1); }
+      else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); step(-1); }
+      else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !$('cmd').value) turnLook(e.key === 'ArrowRight' ? 1 : -1);
+      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') $('cmd').focus();
+    });
+    let sx = 0, sy = 0;
+    $('stage').addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    $('stage').addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dy) > 44 && Math.abs(dy) >= Math.abs(dx)) step(dy < 0 ? 1 : -1);
+      else if (Math.abs(dx) > 44) turnLook(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    addEventListener('resize', resize);
+    canvas.addEventListener('pointermove', e => { mouse.tx = e.clientX; mouse.ty = e.clientY; if (!mouse.on) { mouse.x = e.clientX; mouse.y = e.clientY; } mouse.on = true; });
+    canvas.addEventListener('pointerleave', () => { mouse.on = false; });
+    canvas.addEventListener('click', e => {
+      mouse.x = mouse.tx = e.clientX; mouse.y = mouse.ty = e.clientY;
+      const reply = theme.click(mouse, lastT);
+      if (reply) print(reply);
+    });
 
-    // === Render letter as pure white, no animation ===
-    function drawLetter(canvas, ch, opts){
-      const {gridX=6, gridY=8, showGrid=true, weightMul=1, inset: insetOpt=24} = opts||{};
-      const cssW = canvas.getBoundingClientRect().width || canvas.offsetWidth || 400;
-      const cssH = cssW * 5/3;
-      const ctx = setupCanvas(canvas, cssW, cssH);
-      const W = cssW, H = cssH; ctx.clearRect(0,0,W,H);
+    LIST.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.textContent = pad(i); b.setAttribute('aria-label', c.name);
+      b.addEventListener('click', () => go(i));
+      $('rail').appendChild(b);
+    });
 
-      const inset = insetOpt; const x = inset, y = inset; const w = W-2*inset, h = H-2*inset;
-      const rCorner = Math.min(w/gridX, h/gridY);
-
-      if(showGrid){ drawRuleGrid(ctx, x,y,w,h, gridX, gridY); drawGridLabels(ctx, x,y,w,h, gridX, gridY); }
-
-      const toXY = (c,r)=>({ x: x + (c/gridX)*w, y: y + (r/gridY)*h });
-      const s = Math.min(w,h);
-      const width = monoWidth(s) * weightMul;
-
-      const paths = letterBlueprint(ch, gridX, gridY);
-      paths.forEach(path=>{
-        const pts = path.map(p=>({x:x+(p.c/gridX)*w, y:y+(p.r/gridY)*h}));
-        // solid white stroke
-        ctx.save(); ctx.strokeStyle='#fff'; ctx.lineWidth=width; ctx.lineCap='round'; ctx.lineJoin='round';
-        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-        for(let i=1;i<pts.length;i++){ const p0=pts[i-1], p1=pts[i], p2=(i<pts.length-1)? pts[i+1]: null; if(p2 && isRightAngle(p0,p1,p2)) ctx.arcTo(p1.x,p1.y,p2.x,p2.y, rCorner); else ctx.lineTo(p1.x,p1.y);} ctx.stroke(); ctx.restore();
-      });
-    }
-
-    // === Mount hero K (static) ===
-    const hero = document.getElementById('heroCanvas');
-    function renderHero(){ drawLetter(hero, 'K', {gridX:6, gridY:8, showGrid:true}); }
-    window.addEventListener('resize', renderHero); renderHero();
-
-    // === Build flyer strip (IGURUMI white) ===
-    const miniWrap = document.getElementById('miniLetters');
-    function mountStrip(){ miniWrap.innerHTML=''; const letters = WORD.slice(1).split(''); letters.forEach(ch=>{ const c=document.createElement('canvas'); c.className='mini'; miniWrap.appendChild(c); requestAnimationFrame(()=> drawLetter(c, ch, { gridX:6, gridY:8, showGrid:false, weightMul:1.35, inset:10})); }); }
-    window.addEventListener('resize', mountStrip); mountStrip();
-
-    // === Self-test ===
-    (function(){ const w = monoWidth(300); if(!(w>0)) console.error('[SELFTEST] width calc failed'); })();
+    resize();
+    const start = LIST.findIndex(c => '#' + c.id === location.hash);
+    go(Math.max(0, start));
+    if (!calm) requestAnimationFrame(draw);
+    document.fonts.ready.then(() => { if (calm) requestAnimationFrame(draw); });
   </script>
 </body>
 </html>
