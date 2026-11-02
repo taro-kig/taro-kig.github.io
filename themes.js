@@ -17,11 +17,13 @@
       g.fillText(c, x * cw, y * ch);
     };
     // 背景を塗ってから文字を置くことで、AAの部品を下の絵より手前に出す
-    const stamp = (x, y, lines, col) => lines.forEach((line, r) => {
+    // solid なら行の内側の空白も塗りつぶし、輪郭の中に背景を透かさない
+    const stamp = (x, y, lines, col, solid = false) => lines.forEach((line, r) => {
+      const from = line.search(/\S/), to = line.trimEnd().length;
       for (let i = 0; i < line.length; i++) {
-        if (line[i] === ' ') continue;
+        if (line[i] === ' ' && !(solid && i > from && i < to)) continue;
         g.fillStyle = bg; last = bg; g.fillRect((x + i) * cw, (y + r) * ch, cw, ch);
-        put(x + i, y + r, line[i], col);
+        if (line[i] !== ' ') put(x + i, y + r, line[i], col);
       }
     });
     return { cols: Math.ceil(W / cw), rows: Math.ceil(H / ch), put, stamp, small, cw, ch };
@@ -85,7 +87,7 @@
     },
   };
 
-  // レーベル: 本 → 流れる本棚と、羽ばたく本
+  // レーベル: 本 → 夜の図書室。明かりの届く所だけ本棚が見え、開いた本から文字が舞い上がる
   const PHRASES = ['頁をめくる音だけが響いていた。', '栞はいつも同じ場所に挟まれている。', 'その名前は余白に書かれていた。', 'あなたはまだ気づいていない。', '古い書架の奥に一冊だけ残っている。', '物語の結末はもう決まっている。', 'ずっとあなたを探していた。', '次の章で、また会いましょう。'];
   const FILL = ['||', '==', '::', '##', '%%', '//'];
   const SPINE_COLS = ['rgba(150,140,220,.5)', 'rgba(232,230,225,.32)', 'rgba(110,120,170,.55)', 'rgba(190,170,130,.42)', 'rgba(232,230,225,.2)'];
@@ -94,6 +96,8 @@
     ['  _______ _______  ', ' /~~~~~~~V~~~~~~~\\ ', '/~~~~~~~~|~~~~~~~~\\', '`--------\'--------\''],
     ['\\~~~~~~~   ~~~~~~~/', ' \\~~~~~~\\ /~~~~~~/ ', '  \\~~~~~~V~~~~~~/  ', '   `-----\'-----\'   '],
   ];
+  const OPEN_BOOK = ['   ________________ ________________', " .'~~~~~~~~~~~~~~~~V~~~~~~~~~~~~~~~~`.", '/ ~~~ ~~~~ ~~~~~~~ | ~~~~ ~~~ ~~~~~~~ \\', '| ~~~~~ ~~ ~~~ ~~~ | ~~ ~~~~~ ~~ ~~~~ |', '| ~~~ ~~~~~ ~ ~~~~ | ~~~~ ~~ ~~~ ~~~~ |', '|__________________|__________________|', "`==================+=================='"];
+  const LECTERN = ['   \\\\         //', '    ||       ||', '  __||_______||__', ' /_______________\\'];
   const shelfBooks = s => {
     const list = [];
     let total = 0;
@@ -110,35 +114,92 @@
     help: 'find 言葉  本の中を検索する',
     tip: 'click to read a book',
     draw(g, W, H, T, { accent, bg, mouse }){
-      const { cols, rows, put, stamp, cw, ch } = grid(g, W, H, bg);
-      const mx = mouse.x / cw, my = mouse.y / ch;
-      const hop = Math.floor(T / 1.8), litShelf = hop % Math.ceil((rows - 4) / 7);
-      for (let s = 0, y = 3; y < rows; s++, y += 7) {
-        const shelf = shelves[s % shelves.length], dir = s % 2 ? 1 : -1, shift = Math.floor(T * 2.4) * dir;
-        const lit = shelf.list[hash(hop) * shelf.list.length | 0];
-        for (let n = 0; n < 2; n++) shelf.list.forEach(b => {
-          const x = ((b.at + shift) % shelf.total + shelf.total) % shelf.total - (n ? shelf.total : 0);
-          if (x > cols || x + b.w + 2 < 0) return;
-          const near = mouse.on ? Math.hypot(x + b.w / 2 + 1 - mx, (y + 3 - my) * 2) : 99;
-          const on = (s === litShelf && b === lit) || near < 5, top = y + 5 - b.h - (near < 5 ? 1 : 0);
-          const col = on ? accent : near < 22 ? `rgba(232,230,225,${(.8 - near * .025).toFixed(2)})` : b.col;
+      const { cols, rows, put, stamp, small, cw, ch } = grid(g, W, H, bg);
+      const mx = mouse.x / cw, my = mouse.y / ch, floor = Math.round(rows * (small ? .52 : .74));
+      const lampX = Math.round(cols * .34 + Math.sin(T * .7) * 2), lampY = 9;
+      // 本棚は暗い壁。吊りランプとカーソルの明かりが届く所だけ見える
+      for (let s = 0, y = 3; y + 6 < floor; s++, y += 7) {
+        const shelf = shelves[s % shelves.length];
+        shelf.list.forEach(b => {
+          const x = b.at - 8;
+          if (x > cols) return;
+          const cx = x + b.w / 2 + 1, lamp = Math.hypot(cx - lampX, (y + 3 - lampY) * 2) * 1.5;
+          const near = Math.min(lamp, mouse.on ? Math.hypot(cx - mx, (y + 3 - my) * 2) : 99);
+          const on = near < 5, top = y + 5 - b.h - (on ? 1 : 0);
+          const col = on ? accent : near < 26 ? `rgba(232,222,205,${(.75 - near * .024).toFixed(2)})` : b.col;
+          g.globalAlpha = near < 26 ? 1 : .4;
           for (let c = 1; c <= b.w; c++) put(x + c, top, '_', col);
           for (let r = 1; r <= b.h; r++) {
             put(x, top + r, '|', col); put(x + b.w + 1, top + r, '|', col);
-            const pattern = r === 2 ? '='.repeat(b.w) : (on ? '#'.repeat(b.w) : b.fill.repeat(b.w).slice(0, b.w));
+            const pattern = r === 2 ? '='.repeat(b.w) : b.fill.repeat(b.w).slice(0, b.w);
             for (let c = 0; c < b.w; c++) put(x + 1 + c, top + r, pattern[c], col);
           }
         });
-        for (let x = 0; x < cols; x++) put(x, y + 6, x % 9 === 0 ? '+' : '=', 'rgba(232,230,225,.26)');
+        g.globalAlpha = 1;
+        for (let x = 0; x < cols; x++) put(x, y + 6, x % 9 === 0 ? '+' : '=', 'rgba(232,230,225,.2)');
       }
-      for (let i = 0; i < 3; i++) {
-        const span = cols + 40, x = Math.round(((hash(i + 5) * span + T * (2.5 + i * 1.4)) % span) - 20);
-        const y = Math.round(rows * (.2 + i * .27) + Math.sin(T * .8 + i * 2) * 3);
-        const wing = [0, 1, 2, 1][Math.floor(T * 4 + i) % 4];
-        stamp(x, y, WINGS[wing], i === 1 ? accent : 'rgba(232,230,225,.72)');
+      // 市松の床
+      for (let y = floor; y < rows; y++) {
+        const d = y - floor + 2;
+        for (let x = 0; x < cols; x += 2) {
+          const c = (Math.floor((x - cols / 2) / d * 1.6) + Math.floor(12 / d)) & 1;
+          if (c) put(x, y, ':', `rgba(170,160,220,${(.12 + d * .012).toFixed(2)})`);
+        }
+      }
+      // 窓と月明かり
+      [{ cx: Math.round(cols * (small ? .1 : .16)), moon: true }, { cx: Math.round(cols * .86), moon: false }].forEach(w => {
+        const top = 4, r = 6, h = 13;
+        for (let y = 0; y < h; y++) {
+          const half = y < r ? Math.round(2 * Math.sqrt(r * r - (r - y) * (r - y))) : 2 * r;
+          let line = '';
+          for (let x = -half; x <= half; x++) line += Math.abs(x) >= half - 1 ? '#' : x === 0 ? '|' : (y % 4 === 3 ? '-' : ' ');
+          stamp(w.cx - half, top + y, [line], '#6e6a94', true);
+        }
+        for (let y = top + 13; y < rows; y++) for (let x = -12; x <= 12; x += 2) {
+          const bx = Math.round(w.cx + x + (y - top - 13) * .5);
+          if (hash2(bx, y + Math.floor(T * 1.5)) > .9) put(bx, y, '.', 'rgba(190,200,255,.38)');
+        }
+        if (w.moon) stamp(w.cx + 3, top + 2, [' .-. ', '(   )', " `-' "], '#fff2c8', true);
+      });
+      // 吊りランプ
+      for (let y = 3; y < lampY; y++) put(Math.round(cols * .34 + (lampX - cols * .34) * (y - 3) / 6), y, '|', 'rgba(232,230,225,.4)');
+      stamp(lampX - 3, lampY, ['  _|_  ', ' /###\\ ', '/#####\\', '  \\_/  '], '#ffcf70', true);
+      // 脚立
+      const ladder = cols - 16;
+      for (let y = Math.round(rows * .2); y < floor + 2; y++) stamp(ladder, y, [y % 2 ? '|====|' : '|    |'], 'rgba(190,170,130,.75)', true);
+      for (let i = 0; i < 2; i++) {
+        const span = cols + 40, x = Math.round(((hash(i + 5) * span + T * (2 + i * 1.2)) % span) - 20);
+        const y = Math.round(rows * (.2 + i * .22) + Math.sin(T * .8 + i * 2) * 3);
+        stamp(x, y, WINGS[[0, 1, 2, 1][Math.floor(T * 4 + i) % 4]], i ? accent : 'rgba(232,230,225,.72)');
+      }
+      // 書見台の開いた本。文字が頁から舞い上がり、6秒ごとに頁がめくれる
+      const bx = 2, by = small ? Math.round(rows * .54) : rows - 17, cx = bx + 18;
+      stamp(bx + 10, by + 7, LECTERN, '#8a6a4e');
+      stamp(bx, by, OPEN_BOOK, '#e8e6e1', true);
+      const since = T - this.flip < .7 ? T - this.flip : (T % 6) - 5.3;
+      if (since > 0 && since < .7) {
+        const px = cx + Math.round(Math.cos(since / .7 * Math.PI) * 15);
+        for (let r = 1; r < 5; r++) stamp(px, by + r, ['/'], accent, true);
+      }
+      const letters = PHRASES.join('');
+      for (let i = 0; i < 16; i++) {
+        const age = (T * .13 + hash(i + 30)) % 1, x0 = cx + (hash(i + 60) - .5) * 30;
+        const x = x0 + Math.sin(age * 6 + i) * 3 + (mouse.on ? (mx - x0) * age * .6 : 0), y = by - age * 11 + (mouse.on ? (my - by) * age * .4 : 0);
+        put(Math.round(x), Math.round(y), letters[(i * 7 + Math.floor(T * .13 + hash(i + 30))) % letters.length], `rgba(190,180,255,${(1 - age).toFixed(2)})`);
+      }
+      // 積んだ本と蝋燭
+      if (!small) {
+        const sx = bx + 41;
+        stamp(sx, by + 7, ['==[_______]==', '[===========]', '==[_________]'], accent, true);
+        stamp(sx + 4, by + 2, [' |=|', ' | |', ' | |', ' |_|', ' | |'], '#e8e6e1', true);
+        stamp(sx + 4, by, Math.floor(T * 7) % 2 ? [' ( ', ' ) '] : [' ) ', ' ( '], '#ffcf70');
       }
     },
-    click(){ return `<span class="dim">$ read book</span>\n\n${PHRASES[Math.floor(Math.random() * PHRASES.length)]}`; },
+    flip: -9,
+    click(mouse, T){
+      this.flip = T;
+      return `<span class="dim">$ read book</span>\n\n${PHRASES[Math.floor(Math.random() * PHRASES.length)]}`;
+    },
     run(arg){
       if (!arg) return '<span class="dim">何を探しますか？</span>';
       const hits = PHRASES.filter(s => s.includes(arg));
@@ -213,5 +274,82 @@
     },
   };
 
-  window.THEMES = { plot, book, meadow };
+  // 春日ツバキ: 狸寝入り → 夜空の下で寝る狸の夢の中、雲の上を羊が跳ねて柵を越える
+  const WOOL = ['     .-~~-.-~~-.-~.   ', '  .-(o 8 o 8 o 8 o)-. ', ' ( 8 o 8 o 8 o 8 o 8 )', '(o 8 o 8 o 8 o 8 o 8 )', ' ( 8 o 8 o 8 o 8 o 8 )', "  `-.o_8_o_8_o_8_.-'  "];
+  const FACE = ['  .-.__ ', '=(     \\', '  \\    _)', "   `--' "];
+  const HORN = [' ,-. ', '( @ )', " `-' "];
+  const LEGS = [['   || ||      || ||', '   "" ""      "" ""'], ['  // //      // //', ' "  "       "  "']];
+  const FENCE = ['.-.   .-.', '| |___| |', '| |===| |', '| |   | |', '| |___| |', '| |===| |', '| |   | |', '|_|   |_|'];
+  const HEAD = ['    .-.           .-.    ', '   ( # )_________( # )   ', "   /`-'           `-'\\   ", '  /                   \\  ', ' |                     | ', ' |                     | ', ' |                     | ', '  \\                   /  ', "   `-._           _.-'   ", "       `---------'       "];
+  const MASK = eyes => ['.#####.   .#####.', `(#${eyes[0]}#)   (#${eyes[1]}#)`, "`#####'   `#####'"];
+  const MUZZLE = ['  (_)  ', ' .-^-. ', "  `w'  "];
+  const LEAF = ['  _  ', ' /|\\ ', '<_|_>'];
+  const CURLED = ["             _.-~~~~~~-._  ", "    .-=-.  .-'  ' ' ' '  `", "  /#=#=#`.'  ' ' ' ' ' ' '", " (=#=#=#=Y  ' ' ' ' ' ' ' ", "  `-.=#=#\\ ' ' ' ' ' ' ' '", "     ``--'-.__ ' ' ' ' ' ", '            (____)-----(_'];
+  const MOON = ['   _.-.', " .'  .'", '/   /  ', '\\   \\  ', " '._ '.", "    '-'"];
+  const SLEEPY = ['……寝てます。起きてません。', 'すぅ……すぅ……', '……見てませんよ？', 'あと五分だけ……'];
+  const CREAM = '#f4f1de', HOP = 30;
+  const flock = Array.from({ length: 4 }, (_, i) => ({ at: (i + hash(i + 200) * .4) / 4, speed: 6, last: null }));
+  let counted = 0;
+  const dream = {
+    cmd: 'count',
+    help: 'count     羊を数える',
+    tip: 'click to add a sheep',
+    draw(g, W, H, T, { accent, bg, mouse }){
+      const { cols, rows, put, stamp, small, cw, ch } = grid(g, W, H, bg);
+      const mx = mouse.x / cw, my = mouse.y / ch, span = cols + 60;
+      const lane = Math.round(rows * (small ? .55 : .78));
+      this.cw = cw; this.span = span;
+      for (let y = 3; y < rows; y++) for (let x = 0; x < cols; x++) if (hash2(x, y) > .985) put(x, y, Math.sin(T * 1.5 + x * y) > .3 ? '+' : '.', 'rgba(232,230,225,.4)');
+      for (let i = 0; i < 6; i++) {
+        const drift = cols + 24, x = Math.round((hash(i + 500) * drift + T * (.8 + i * .2)) % drift) - 12;
+        stamp(x, Math.round(rows * (.12 + i * .15)), CLOUD, 'rgba(232,230,225,.14)');
+      }
+      stamp(cols - 12, 5, MOON, '#ffe3a8');
+      // 雲の帯と柵。柵は高く跳ぶ回の真ん中に立てる
+      const tx = cols - 26, ty = small ? Math.round(rows * .53) : rows - 12;
+      for (let x = 0; x < cols; x++) {
+        const v = Math.sin(x * .19 + T * .5) + Math.sin(x * .07 - T * .3);
+        if (v > -.7) put(x, lane + 8, v > .6 ? '~' : v > 0 ? '-' : '.', `rgba(232,230,225,${(.2 + (v + 2) * .08).toFixed(2)})`);
+      }
+      for (let k = 0; k * HOP * 2 < cols; k++) stamp(Math.round((k * 2 + .5) * HOP) + 8, lane, FENCE, 'rgba(255,190,150,.7)', true);
+      flock.forEach(s => {
+        const x = (s.at * span + T * s.speed) % span - 30, along = x + HOP * 2;
+        const hop = Math.floor(along / HOP), u = (along % HOP) / HOP;
+        const over = hop % 2 === 0, cursor = mouse.on && Math.abs(my - lane - 4) < 12 && Math.abs(x + 13 - mx) < 15;
+        const lift = Math.round(Math.sin(u * Math.PI) * (cursor ? 14 : over ? 11 : 3));
+        if (over && u >= .5 && s.last !== null && s.last < .5) counted++;
+        s.last = u;
+        const sx = Math.round(x), sy = lane - lift;
+        const col = cursor ? accent : CREAM;
+        stamp(sx, sy + 6, LEGS[lift > 2 ? 1 : 0], 'rgba(232,230,225,.75)');
+        stamp(sx, sy, WOOL, col, true);
+        stamp(sx + 18, sy, FACE, col, true);
+        stamp(sx + 24, sy + 1, ['●'], col);
+        stamp(sx + 18, sy - 1, HORN, col, true);
+      });
+      stamp(3, 4, ['sheep: ' + String(counted).padStart(4, '0')], accent);
+      // 寝たふりをする狸
+      const fur = '#e0b584';
+      if (!small) stamp(tx - 17, ty + 3, CURLED, fur, true);
+      stamp(tx, ty, HEAD, fur, true);
+      stamp(tx + 10, ty - 3, LEAF, 'rgb(120,190,90)');
+      stamp(tx + 4, ty + 3, MASK(['~~~', '~~~']), '#a57c60', true);
+      stamp(tx + 9, ty + 6, MUZZLE, '#f4e6d2');
+      stamp(tx + 2, ty - 1, ['o'], CREAM); stamp(tx - 2, ty - 3, ['O'], CREAM); stamp(tx - 7, ty - 6, ['( )'], CREAM);
+      for (let i = 0; i < 5; i++) {
+        const age = (T * .35 + i / 5) % 1, x = Math.round(tx + 6 - age * 12 + Math.sin(age * 8 + i) * 1.5), y = Math.round(ty - 1 - age * 12);
+        put(x, y, age > .5 ? 'Z' : 'z', `rgba(232,230,225,${(.8 - age * .6).toFixed(2)})`);
+      }
+    },
+    click(mouse, T){
+      if (!this.span || flock.length >= 12) return;
+      const speed = 5.5 + Math.random(), pos = mouse.x / this.cw + 17 - T * speed;
+      flock.push({ at: (pos % this.span + this.span) % this.span / this.span, speed, last: null });
+    },
+    run(){
+      return `<span class="key">${counted}</span> 匹まで数えました\n\n<span class="dim">${SLEEPY[Math.floor(Math.random() * SLEEPY.length)]}</span>`;
+    },
+  };
+
+  window.THEMES = { plot, book, meadow, dream };
 })();

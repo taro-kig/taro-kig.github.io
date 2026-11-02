@@ -34,4 +34,15 @@ window.CHARACTERS = [
     quote: 'ああ、ついに私をみつけてくれたんですね。',
     looks: ['assets/label.jpg'],
   },
+  {
+    id: 'tsubaki',
+    name: '春日ツバキ',
+    from: 'ブルーアーカイブ',
+    maker: '@heyaoheyao',
+    accent: '#ff5a5a',
+    bg: '#200d1a',
+    theme: 'dream',
+    quote: '',
+    looks: ['assets/tsubaki.jpg'],
+  },
 ];
